@@ -64,8 +64,6 @@ func (s *service) PlaceOrder(ctx context.Context, order createOrderParams) (repo
 		if err != nil {
 			return repo.Order{}, fmt.Errorf("failed to create order item: %w", err)
 		}
-
-		// Homework: Update the product stock quantity
 	}
 
 	tx.Commit(ctx)
