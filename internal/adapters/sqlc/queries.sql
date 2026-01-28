@@ -13,3 +13,8 @@ INSERT INTO orders (
 INSERT INTO order_items (
   order_id, product_id, quantity, price_in_cents
 ) VALUES ($1, $2, $3, $4) RETURNING *;
+
+-- name: FindOrderByID :many
+SELECT * FROM orders
+INNER JOIN order_items ON order_items.order_id = orders.id
+WHERE orders.id = $1;

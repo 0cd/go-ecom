@@ -51,6 +51,7 @@ func (a *app) mount() http.Handler {
 
 	ordersService := orders.NewService(repo.New(a.db), a.db)
 	ordersHandler := orders.NewHandler(ordersService)
+	r.Get("/orders/{id}", ordersHandler.FindOrderByID)
 	r.Post("/orders", ordersHandler.PlaceOrder)
 
 	return r

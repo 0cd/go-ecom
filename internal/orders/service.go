@@ -10,6 +10,7 @@ import (
 
 type Service interface {
 	PlaceOrder(ctx context.Context, order createOrderParams) (repo.Order, error)
+	FindOrderByID(ctx context.Context, id int64) (order, error)
 }
 
 type service struct {
@@ -69,4 +70,37 @@ func (s *service) PlaceOrder(ctx context.Context, order createOrderParams) (repo
 	tx.Commit(ctx)
 
 	return createdOrder, nil
+}
+
+func (s *service) FindOrderByID(ctx context.Context, id int64) (order, error) {
+	foundOrders, err := s.repo.FindOrderByID(ctx, id)
+	if err != nil {
+		return order{}, fmt.Errorf("failed to find order: %w", err)
+	}
+
+	if len(foundOrders) == 0 {
+		return order{}, fmt.Errorf("order not found")
+	}
+
+	items := make([]orderItem, 0, len(foundOrders))
+	var totalPrice int32
+	for _, row := range foundOrders {
+		items = append(items, orderItem{
+			ProductID:    row.ProductID,
+			Quantity:     row.Quantity,
+			PriceInCents: row.PriceInCents,
+		})
+
+		totalPrice += row.Quantity * row.PriceInCents
+	}
+
+	o := order{
+		ID:         foundOrders[0].ID,
+		CustomerID: foundOrders[0].CustomerID,
+		Items:      items,
+		TotalPrice: totalPrice,
+		CreatedAt:  foundOrders[0].CreatedAt,
+	}
+
+	return o, nil
 }
