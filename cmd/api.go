@@ -48,6 +48,7 @@ func (a *app) mount() http.Handler {
 
 	r.Get("/products", productHandler.ListProducts)
 	r.Get("/products/{id}", productHandler.FindProductByID)
+	r.Post("/products", productHandler.CreateProduct)
 
 	ordersService := orders.NewService(repo.New(a.db), a.db)
 	ordersHandler := orders.NewHandler(ordersService)

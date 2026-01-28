@@ -48,3 +48,21 @@ func (h *handler) FindProductByID(w http.ResponseWriter, r *http.Request) {
 
 	json.Write(w, http.StatusOK, product)
 }
+
+func (h *handler) CreateProduct(w http.ResponseWriter, r *http.Request) {
+	var product createProductParams
+	if err := json.Read(r, &product); err != nil {
+		log.Printf("Failed to parse order request: %v", err)
+		http.Error(w, "invalid order request body", http.StatusBadRequest)
+		return
+	}
+
+	createdProduct, err := h.service.CreateProduct(r.Context(), product)
+	if err != nil {
+		log.Printf("Failed to create product in service: %v", err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	json.Write(w, http.StatusCreated, createdProduct)
+}
