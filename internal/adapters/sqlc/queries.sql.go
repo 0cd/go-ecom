@@ -81,17 +81,16 @@ func (q *Queries) CreateProduct(ctx context.Context, arg CreateProductParams) (P
 }
 
 const findOrderByID = `-- name: FindOrderByID :many
-SELECT orders.id, customer_id, created_at, order_items.id, order_id, product_id, quantity, price_in_cents FROM orders
+SELECT orders.id, orders.customer_id, orders.created_at, order_items.product_id, order_items.quantity, order_items.price_in_cents FROM orders
 INNER JOIN order_items ON order_items.order_id = orders.id
 WHERE orders.id = $1
+ORDER BY order_items.product_id
 `
 
 type FindOrderByIDRow struct {
 	ID           int64              `json:"id"`
 	CustomerID   int64              `json:"customer_id"`
 	CreatedAt    pgtype.Timestamptz `json:"created_at"`
-	ID_2         int64              `json:"id_2"`
-	OrderID      int64              `json:"order_id"`
 	ProductID    int64              `json:"product_id"`
 	Quantity     int32              `json:"quantity"`
 	PriceInCents int32              `json:"price_in_cents"`
@@ -110,8 +109,6 @@ func (q *Queries) FindOrderByID(ctx context.Context, id int64) ([]FindOrderByIDR
 			&i.ID,
 			&i.CustomerID,
 			&i.CreatedAt,
-			&i.ID_2,
-			&i.OrderID,
 			&i.ProductID,
 			&i.Quantity,
 			&i.PriceInCents,
@@ -144,7 +141,7 @@ func (q *Queries) FindProductByID(ctx context.Context, id int64) (Product, error
 }
 
 const listProducts = `-- name: ListProducts :many
-SELECT id, name, price_in_cents, quantity, created_at FROM products
+SELECT id, name, price_in_cents, quantity, created_at FROM products ORDER BY id
 `
 
 func (q *Queries) ListProducts(ctx context.Context) ([]Product, error) {
@@ -171,4 +168,38 @@ func (q *Queries) ListProducts(ctx context.Context) ([]Product, error) {
 		return nil, err
 	}
 	return items, nil
+}
+
+const updateProduct = `-- name: UpdateProduct :one
+UPDATE products
+SET
+  name = coalesce($2, name),
+  price_in_cents = coalesce($3, price_in_cents),
+  quantity = coalesce($4, quantity)
+WHERE id = $1 RETURNING id, name, price_in_cents, quantity, created_at
+`
+
+type UpdateProductParams struct {
+	ID           int64       `json:"id"`
+	Name         pgtype.Text `json:"name"`
+	PriceInCents pgtype.Int4 `json:"price_in_cents"`
+	Quantity     pgtype.Int4 `json:"quantity"`
+}
+
+func (q *Queries) UpdateProduct(ctx context.Context, arg UpdateProductParams) (Product, error) {
+	row := q.db.QueryRow(ctx, updateProduct,
+		arg.ID,
+		arg.Name,
+		arg.PriceInCents,
+		arg.Quantity,
+	)
+	var i Product
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.PriceInCents,
+		&i.Quantity,
+		&i.CreatedAt,
+	)
+	return i, err
 }

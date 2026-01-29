@@ -6,6 +6,7 @@ import (
 
 	repo "github.com/0cd/go-ecom/internal/adapters/sqlc"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 type Service interface {
@@ -64,6 +65,17 @@ func (s *service) PlaceOrder(ctx context.Context, order createOrderParams) (repo
 		})
 		if err != nil {
 			return repo.Order{}, fmt.Errorf("failed to create order item: %w", err)
+		}
+
+		_, err = qtx.UpdateProduct(ctx, repo.UpdateProductParams{
+			ID: product.ID,
+			Quantity: pgtype.Int4{
+				Int32: product.Quantity - item.Quantity,
+				Valid: true,
+			},
+		})
+		if err != nil {
+			return repo.Order{}, fmt.Errorf("failed to update product quantity: %w", err)
 		}
 	}
 
