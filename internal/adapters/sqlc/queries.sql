@@ -17,6 +17,9 @@ SET
   quantity = coalesce(sqlc.narg('quantity'), quantity)
 WHERE id = $1 RETURNING *;
 
+-- name: DeleteProduct :exec
+DELETE FROM products WHERE id = $1;
+
 -- name: CreateOrder :one
 INSERT INTO orders (
   customer_id

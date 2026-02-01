@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strconv"
 
+	repo "github.com/0cd/go-ecom/internal/adapters/sqlc"
 	"github.com/0cd/go-ecom/internal/json"
 	"github.com/go-chi/chi/v5"
 )
@@ -52,8 +53,8 @@ func (h *handler) FindProductByID(w http.ResponseWriter, r *http.Request) {
 func (h *handler) CreateProduct(w http.ResponseWriter, r *http.Request) {
 	var product createProductParams
 	if err := json.Read(r, &product); err != nil {
-		log.Printf("Failed to parse order request: %v", err)
-		http.Error(w, "invalid order request body", http.StatusBadRequest)
+		log.Printf("Failed to parse product request: %v", err)
+		http.Error(w, "invalid product request body", http.StatusBadRequest)
 		return
 	}
 
@@ -65,4 +66,79 @@ func (h *handler) CreateProduct(w http.ResponseWriter, r *http.Request) {
 	}
 
 	json.Write(w, http.StatusCreated, createdProduct)
+}
+
+func (h *handler) UpdateProduct(w http.ResponseWriter, r *http.Request) {
+	idParam := chi.URLParam(r, "id")
+	id, err := strconv.ParseInt(idParam, 10, 64)
+	if err != nil {
+		log.Printf("Invalid product id: %s: %v", idParam, err)
+		http.Error(w, "invalid product id", http.StatusBadRequest)
+		return
+	}
+
+	updates := repo.UpdateProductParams{
+		ID: id,
+	}
+	if err := json.Read(r, &updates); err != nil {
+		log.Printf("Failed to parse product request: %v", err)
+		http.Error(w, "invalid product request body", http.StatusBadRequest)
+		return
+	}
+
+	updatedProduct, err := h.service.UpdateProduct(r.Context(), updates)
+	if err != nil {
+		log.Printf("Failed to update product in service: %v", err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	json.Write(w, http.StatusOK, updatedProduct)
+}
+
+func (h *handler) ReplaceProduct(w http.ResponseWriter, r *http.Request) {
+	idParam := chi.URLParam(r, "id")
+	id, err := strconv.ParseInt(idParam, 10, 64)
+	if err != nil {
+		log.Printf("Invalid product id: %s: %v", idParam, err)
+		http.Error(w, "invalid product id", http.StatusBadRequest)
+		return
+	}
+
+	updates := repo.UpdateProductParams{
+		ID: id,
+	}
+	if err := json.Read(r, &updates); err != nil {
+		log.Printf("Failed to parse product request: %v", err)
+		http.Error(w, "invalid product request body", http.StatusBadRequest)
+		return
+	}
+
+	updatedProduct, err := h.service.ReplaceProduct(r.Context(), updates)
+	if err != nil {
+		log.Printf("Failed to replace product in service: %v", err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	json.Write(w, http.StatusOK, updatedProduct)
+}
+
+func (h *handler) DeleteProduct(w http.ResponseWriter, r *http.Request) {
+	idParam := chi.URLParam(r, "id")
+	id, err := strconv.ParseInt(idParam, 10, 64)
+	if err != nil {
+		log.Printf("Invalid product id: %s: %v", idParam, err)
+		http.Error(w, "invalid product id", http.StatusBadRequest)
+		return
+	}
+
+	err = h.service.DeleteProduct(r.Context(), id)
+	if err != nil {
+		log.Printf("Failed to deleted product in service: %v", err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	json.Write(w, http.StatusNoContent, "product deleted successfully")
 }
