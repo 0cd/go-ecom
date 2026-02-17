@@ -25,8 +25,7 @@ type Querier interface {
 	ListUsers(ctx context.Context) ([]ListUsersRow, error)
 	SearchUsers(ctx context.Context, dollar_1 pgtype.Text) ([]SearchUsersRow, error)
 	UpdateProduct(ctx context.Context, arg UpdateProductParams) (Product, error)
-	UpdateUserEmail(ctx context.Context, arg UpdateUserEmailParams) error
-	UpdateUserPassword(ctx context.Context, arg UpdateUserPasswordParams) error
+	UpdateUser(ctx context.Context, arg UpdateUserParams) (User, error)
 	VerifyUser(ctx context.Context, id int64) error
 }
 

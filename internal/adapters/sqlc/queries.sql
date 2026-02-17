@@ -53,24 +53,24 @@ WHERE email ILIKE '%' || $1 || '%'
 ORDER BY id;
 
 -- name: FindUserByID :one
-SELECT id, email, verified, is_admin, updated_at, created_at
+SELECT id, email, verified, password_hash, is_admin, updated_at, created_at
 FROM users
 WHERE id = $1;
 
 -- name: FindUserByEmail :one
-SELECT id, email, verified, is_admin, updated_at, created_at
+SELECT id, email, verified, password_hash, is_admin, updated_at, created_at
 FROM users
 WHERE email = $1;
 
--- name: UpdateUserPassword :exec
+-- name: UpdateUser :one
 UPDATE users
-SET password_hash = $2, updated_at = now()
-WHERE id = $1;
+SET
+  email = coalesce(sqlc.narg('email'), email),
+  password_hash = coalesce(sqlc.narg('password_hash'), password_hash),
+  verified = coalesce(sqlc.narg('verified'), verified),
+  updated_at = now()
+WHERE id = $1 RETURNING *;
 
--- name: UpdateUserEmail :exec
-UPDATE users
-SET email = $2, verified = false, updated_at = now()
-WHERE id = $1;
 
 -- name: VerifyUser :exec
 UPDATE users
