@@ -35,3 +35,47 @@ SELECT orders.id, orders.customer_id, orders.created_at, order_items.product_id,
 INNER JOIN order_items ON order_items.order_id = orders.id
 WHERE orders.id = $1
 ORDER BY order_items.product_id;
+
+-- name: CreateUser :one
+INSERT INTO users (
+  email, password_hash
+) VALUES ($1, $2) RETURNING *;
+
+-- name: ListUsers :many
+SELECT id, email, verified, is_admin, updated_at, created_at
+FROM users
+ORDER BY id;
+
+-- name: SearchUsers :many
+SELECT id, email, verified, is_admin, updated_at, created_at
+FROM users
+WHERE email ILIKE '%' || $1 || '%'
+ORDER BY id;
+
+-- name: FindUserByID :one
+SELECT id, email, verified, is_admin, updated_at, created_at
+FROM users
+WHERE id = $1;
+
+-- name: FindUserByEmail :one
+SELECT id, email, verified, is_admin, updated_at, created_at
+FROM users
+WHERE email = $1;
+
+-- name: UpdateUserPassword :exec
+UPDATE users
+SET password_hash = $2, updated_at = now()
+WHERE id = $1;
+
+-- name: UpdateUserEmail :exec
+UPDATE users
+SET email = $2, verified = false, updated_at = now()
+WHERE id = $1;
+
+-- name: VerifyUser :exec
+UPDATE users
+SET verified = true, updated_at = now()
+WHERE id = $1;
+
+-- name: DeleteUser :exec
+DELETE FROM users WHERE id = $1;

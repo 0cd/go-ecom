@@ -6,17 +6,28 @@ package repo
 
 import (
 	"context"
+
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 type Querier interface {
 	CreateOrder(ctx context.Context, customerID int64) (Order, error)
 	CreateOrderItem(ctx context.Context, arg CreateOrderItemParams) (OrderItem, error)
 	CreateProduct(ctx context.Context, arg CreateProductParams) (Product, error)
+	CreateUser(ctx context.Context, arg CreateUserParams) (User, error)
 	DeleteProduct(ctx context.Context, id int64) error
+	DeleteUser(ctx context.Context, id int64) error
 	FindOrderByID(ctx context.Context, id int64) ([]FindOrderByIDRow, error)
 	FindProductByID(ctx context.Context, id int64) (Product, error)
+	FindUserByEmail(ctx context.Context, email string) (FindUserByEmailRow, error)
+	FindUserByID(ctx context.Context, id int64) (FindUserByIDRow, error)
 	ListProducts(ctx context.Context) ([]Product, error)
+	ListUsers(ctx context.Context) ([]ListUsersRow, error)
+	SearchUsers(ctx context.Context, dollar_1 pgtype.Text) ([]SearchUsersRow, error)
 	UpdateProduct(ctx context.Context, arg UpdateProductParams) (Product, error)
+	UpdateUserEmail(ctx context.Context, arg UpdateUserEmailParams) error
+	UpdateUserPassword(ctx context.Context, arg UpdateUserPasswordParams) error
+	VerifyUser(ctx context.Context, id int64) error
 }
 
 var _ Querier = (*Queries)(nil)

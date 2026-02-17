@@ -80,12 +80,47 @@ func (q *Queries) CreateProduct(ctx context.Context, arg CreateProductParams) (P
 	return i, err
 }
 
+const createUser = `-- name: CreateUser :one
+INSERT INTO users (
+  email, password_hash
+) VALUES ($1, $2) RETURNING id, email, verified, is_admin, password_hash, created_at, updated_at
+`
+
+type CreateUserParams struct {
+	Email        string `json:"email"`
+	PasswordHash string `json:"password_hash"`
+}
+
+func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, error) {
+	row := q.db.QueryRow(ctx, createUser, arg.Email, arg.PasswordHash)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.Email,
+		&i.Verified,
+		&i.IsAdmin,
+		&i.PasswordHash,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const deleteProduct = `-- name: DeleteProduct :exec
 DELETE FROM products WHERE id = $1
 `
 
 func (q *Queries) DeleteProduct(ctx context.Context, id int64) error {
 	_, err := q.db.Exec(ctx, deleteProduct, id)
+	return err
+}
+
+const deleteUser = `-- name: DeleteUser :exec
+DELETE FROM users WHERE id = $1
+`
+
+func (q *Queries) DeleteUser(ctx context.Context, id int64) error {
+	_, err := q.db.Exec(ctx, deleteUser, id)
 	return err
 }
 
@@ -149,6 +184,64 @@ func (q *Queries) FindProductByID(ctx context.Context, id int64) (Product, error
 	return i, err
 }
 
+const findUserByEmail = `-- name: FindUserByEmail :one
+SELECT id, email, verified, is_admin, updated_at, created_at
+FROM users
+WHERE email = $1
+`
+
+type FindUserByEmailRow struct {
+	ID        int64              `json:"id"`
+	Email     string             `json:"email"`
+	Verified  bool               `json:"verified"`
+	IsAdmin   bool               `json:"is_admin"`
+	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+}
+
+func (q *Queries) FindUserByEmail(ctx context.Context, email string) (FindUserByEmailRow, error) {
+	row := q.db.QueryRow(ctx, findUserByEmail, email)
+	var i FindUserByEmailRow
+	err := row.Scan(
+		&i.ID,
+		&i.Email,
+		&i.Verified,
+		&i.IsAdmin,
+		&i.UpdatedAt,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const findUserByID = `-- name: FindUserByID :one
+SELECT id, email, verified, is_admin, updated_at, created_at
+FROM users
+WHERE id = $1
+`
+
+type FindUserByIDRow struct {
+	ID        int64              `json:"id"`
+	Email     string             `json:"email"`
+	Verified  bool               `json:"verified"`
+	IsAdmin   bool               `json:"is_admin"`
+	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+}
+
+func (q *Queries) FindUserByID(ctx context.Context, id int64) (FindUserByIDRow, error) {
+	row := q.db.QueryRow(ctx, findUserByID, id)
+	var i FindUserByIDRow
+	err := row.Scan(
+		&i.ID,
+		&i.Email,
+		&i.Verified,
+		&i.IsAdmin,
+		&i.UpdatedAt,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
 const listProducts = `-- name: ListProducts :many
 SELECT id, name, price_in_cents, quantity, created_at FROM products ORDER BY id
 `
@@ -167,6 +260,91 @@ func (q *Queries) ListProducts(ctx context.Context) ([]Product, error) {
 			&i.Name,
 			&i.PriceInCents,
 			&i.Quantity,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listUsers = `-- name: ListUsers :many
+SELECT id, email, verified, is_admin, updated_at, created_at
+FROM users
+ORDER BY id
+`
+
+type ListUsersRow struct {
+	ID        int64              `json:"id"`
+	Email     string             `json:"email"`
+	Verified  bool               `json:"verified"`
+	IsAdmin   bool               `json:"is_admin"`
+	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+}
+
+func (q *Queries) ListUsers(ctx context.Context) ([]ListUsersRow, error) {
+	rows, err := q.db.Query(ctx, listUsers)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListUsersRow
+	for rows.Next() {
+		var i ListUsersRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Email,
+			&i.Verified,
+			&i.IsAdmin,
+			&i.UpdatedAt,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const searchUsers = `-- name: SearchUsers :many
+SELECT id, email, verified, is_admin, updated_at, created_at
+FROM users
+WHERE email ILIKE '%' || $1 || '%'
+ORDER BY id
+`
+
+type SearchUsersRow struct {
+	ID        int64              `json:"id"`
+	Email     string             `json:"email"`
+	Verified  bool               `json:"verified"`
+	IsAdmin   bool               `json:"is_admin"`
+	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+}
+
+func (q *Queries) SearchUsers(ctx context.Context, dollar_1 pgtype.Text) ([]SearchUsersRow, error) {
+	rows, err := q.db.Query(ctx, searchUsers, dollar_1)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []SearchUsersRow
+	for rows.Next() {
+		var i SearchUsersRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Email,
+			&i.Verified,
+			&i.IsAdmin,
+			&i.UpdatedAt,
 			&i.CreatedAt,
 		); err != nil {
 			return nil, err
@@ -211,4 +389,47 @@ func (q *Queries) UpdateProduct(ctx context.Context, arg UpdateProductParams) (P
 		&i.CreatedAt,
 	)
 	return i, err
+}
+
+const updateUserEmail = `-- name: UpdateUserEmail :exec
+UPDATE users
+SET email = $2, verified = false, updated_at = now()
+WHERE id = $1
+`
+
+type UpdateUserEmailParams struct {
+	ID    int64  `json:"id"`
+	Email string `json:"email"`
+}
+
+func (q *Queries) UpdateUserEmail(ctx context.Context, arg UpdateUserEmailParams) error {
+	_, err := q.db.Exec(ctx, updateUserEmail, arg.ID, arg.Email)
+	return err
+}
+
+const updateUserPassword = `-- name: UpdateUserPassword :exec
+UPDATE users
+SET password_hash = $2, updated_at = now()
+WHERE id = $1
+`
+
+type UpdateUserPasswordParams struct {
+	ID           int64  `json:"id"`
+	PasswordHash string `json:"password_hash"`
+}
+
+func (q *Queries) UpdateUserPassword(ctx context.Context, arg UpdateUserPasswordParams) error {
+	_, err := q.db.Exec(ctx, updateUserPassword, arg.ID, arg.PasswordHash)
+	return err
+}
+
+const verifyUser = `-- name: VerifyUser :exec
+UPDATE users
+SET verified = true, updated_at = now()
+WHERE id = $1
+`
+
+func (q *Queries) VerifyUser(ctx context.Context, id int64) error {
+	_, err := q.db.Exec(ctx, verifyUser, id)
+	return err
 }
