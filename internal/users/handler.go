@@ -69,6 +69,24 @@ func (h *handler) ListUsers(w http.ResponseWriter, r *http.Request) {
 	json.Write(w, http.StatusOK, users)
 }
 
+func (h *handler) GetMe(w http.ResponseWriter, r *http.Request) {
+	userID, ok := r.Context().Value("userID").(int64)
+	if !ok || userID == 0 {
+		log.Printf("Failed to extract userID from context")
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	user, err := h.service.FindUserByID(r.Context(), userID)
+	if err != nil {
+		log.Printf("Failed to find user: %v", err)
+		http.Error(w, "failed to retrieve user", http.StatusInternalServerError)
+		return
+	}
+
+	json.Write(w, http.StatusOK, user)
+}
+
 func (h *handler) SearchUsers(w http.ResponseWriter, r *http.Request) {
 	searchQuery := r.URL.Query().Get("query")
 	if searchQuery == "" {
