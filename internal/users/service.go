@@ -22,7 +22,7 @@ type Service interface {
 	UpdateUserPassword(ctx context.Context, id int64, oldPassword, newPassword string) error
 	UpdateUserEmail(ctx context.Context, id int64, email string) error
 
-	VerifyUser(ctx context.Context, id int64) error
+	VerifyUser(ctx context.Context, id int64, verificationToken string) error
 }
 
 type service struct {
@@ -227,7 +227,7 @@ func (s *service) UpdateUserEmail(ctx context.Context, id int64, email string) e
 	return nil
 }
 
-func (s *service) VerifyUser(ctx context.Context, id int64) error {
+func (s *service) VerifyUser(ctx context.Context, id int64, verificationToken string) error {
 	user, err := s.repo.FindUserByID(ctx, id)
 	if err != nil {
 		return fmt.Errorf("failed to find user: %w", err)
@@ -235,6 +235,19 @@ func (s *service) VerifyUser(ctx context.Context, id int64) error {
 
 	if user.Verified {
 		return fmt.Errorf("user already verified")
+	}
+
+	// TODO: generate an email verification token at user registration and include it in the link
+	// TODO: verify it against db value here
+	// TODO: implement the feature lol
+	// just a static string for now
+
+	if verificationToken == "" {
+		return fmt.Errorf("verification token is required")
+	}
+
+	if verificationToken != "forsenE" {
+		return fmt.Errorf("invalid verification token")
 	}
 
 	_, err = s.repo.UpdateUser(ctx, repo.UpdateUserParams{

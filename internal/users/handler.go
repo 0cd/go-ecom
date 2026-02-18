@@ -121,6 +121,7 @@ func (h *handler) FindUserByID(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Printf("Failed to find user %d: %v", id, err)
 		http.Error(w, "user not found", http.StatusNotFound)
+		return
 	}
 
 	json.Write(w, http.StatusOK, user)
@@ -155,11 +156,10 @@ func (h *handler) UpdateUser(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *handler) UpdateUserPassword(w http.ResponseWriter, r *http.Request) {
-	idParam := chi.URLParam(r, "id")
-	id, err := strconv.ParseInt(idParam, 10, 64)
-	if err != nil {
-		log.Printf("Invalid user id: %s: %v", idParam, err)
-		http.Error(w, "invalid user id", http.StatusBadRequest)
+	userID, ok := r.Context().Value("userID").(int64)
+	if !ok || userID == 0 {
+		log.Printf("Failed to extract userID from context")
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
 
@@ -170,7 +170,7 @@ func (h *handler) UpdateUserPassword(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = h.service.UpdateUserPassword(r.Context(), id, updatePasswordParams.OldPassword, updatePasswordParams.NewPassword)
+	err := h.service.UpdateUserPassword(r.Context(), userID, updatePasswordParams.OldPassword, updatePasswordParams.NewPassword)
 	if err != nil {
 		log.Printf("Failed to update user password in service: %v", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -181,11 +181,10 @@ func (h *handler) UpdateUserPassword(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *handler) UpdateUserEmail(w http.ResponseWriter, r *http.Request) {
-	idParam := chi.URLParam(r, "id")
-	id, err := strconv.ParseInt(idParam, 10, 64)
-	if err != nil {
-		log.Printf("Invalid user id: %s: %v", idParam, err)
-		http.Error(w, "invalid user id", http.StatusBadRequest)
+	userID, ok := r.Context().Value("userID").(int64)
+	if !ok || userID == 0 {
+		log.Printf("Failed to extract userID from context")
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
 
@@ -196,7 +195,7 @@ func (h *handler) UpdateUserEmail(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = h.service.UpdateUserEmail(r.Context(), id, newEmail)
+	err := h.service.UpdateUserEmail(r.Context(), userID, newEmail)
 	if err != nil {
 		log.Printf("Failed to update user password in service: %v", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -207,15 +206,26 @@ func (h *handler) UpdateUserEmail(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *handler) VerifyUser(w http.ResponseWriter, r *http.Request) {
-	idParam := chi.URLParam(r, "id")
-	id, err := strconv.ParseInt(idParam, 10, 64)
-	if err != nil {
-		log.Printf("Invalid user id: %s: %v", idParam, err)
-		http.Error(w, "invalid user id", http.StatusBadRequest)
+	userID, ok := r.Context().Value("userID").(int64)
+	if !ok || userID == 0 {
+		log.Printf("Failed to extract userID from context")
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
 
-	err = h.service.VerifyUser(r.Context(), id)
+	// TODO: generate an email verification token at user registration and include it in the link
+	// TODO: verify it against db value here
+	// TODO: implement the feature lol
+	// just a static string for now
+
+	verificationToken := r.URL.Query().Get("token")
+	if verificationToken == "" {
+		log.Printf("Verification token is empty")
+		http.Error(w, "empty verification token", http.StatusBadRequest)
+		return
+	}
+
+	err := h.service.VerifyUser(r.Context(), userID, verificationToken)
 	if err != nil {
 		log.Printf("Failed to verify user in service: %v", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
