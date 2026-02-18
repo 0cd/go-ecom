@@ -52,7 +52,7 @@ func (a *app) mount() http.Handler {
 	r.Get("/users", userHandler.ListUsers)
 	r.Get("/users/search", userHandler.SearchUsers)
 	r.Get("/users/{id}", userHandler.FindUserByID)
-	r.Patch("/users", userHandler.UpdateUser)
+	r.Patch("/users/{id}", userHandler.UpdateUser)
 	r.Patch("/users/{id}/password", userHandler.UpdateUserPassword)
 	r.Patch("/users/{id}/email", userHandler.UpdateUserEmail)
 	r.Patch("/users/{id}/verify", userHandler.VerifyUser)

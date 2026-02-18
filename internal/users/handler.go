@@ -185,7 +185,7 @@ func (h *handler) UpdateUserEmail(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	json.Write(w, http.StatusOK, "password updated successfully")
+	json.Write(w, http.StatusOK, "email updated successfully")
 }
 
 func (h *handler) VerifyUser(w http.ResponseWriter, r *http.Request) {
