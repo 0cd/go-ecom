@@ -11,7 +11,7 @@ import (
 )
 
 type Querier interface {
-	CreateOrder(ctx context.Context, customerID int64) (Order, error)
+	CreateOrder(ctx context.Context, userID int64) (Order, error)
 	CreateOrderItem(ctx context.Context, arg CreateOrderItemParams) (OrderItem, error)
 	CreateProduct(ctx context.Context, arg CreateProductParams) (Product, error)
 	CreateUser(ctx context.Context, arg CreateUserParams) (User, error)

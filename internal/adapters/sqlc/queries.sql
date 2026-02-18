@@ -22,7 +22,7 @@ DELETE FROM products WHERE id = $1;
 
 -- name: CreateOrder :one
 INSERT INTO orders (
-  customer_id
+  user_id
 ) VALUES ($1) RETURNING *;
 
 -- name: CreateOrderItem :one
@@ -31,10 +31,10 @@ INSERT INTO order_items (
 ) VALUES ($1, $2, $3, $4) RETURNING *;
 
 -- name: FindOrderByID :many
-SELECT orders.id, orders.customer_id, orders.created_at, order_items.product_id, order_items.quantity, order_items.price_in_cents FROM orders
-INNER JOIN order_items ON order_items.order_id = orders.id
-WHERE orders.id = $1
-ORDER BY order_items.product_id;
+SELECT o.id, o.user_id, o.created_at, oi.product_id, oi.quantity, oi.price_in_cents FROM orders o
+INNER JOIN order_items oi ON oi.order_id = o.id
+WHERE o.id = $1
+ORDER BY oi.product_id;
 
 -- name: CreateUser :one
 INSERT INTO users (

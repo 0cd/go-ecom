@@ -20,7 +20,16 @@ func NewHandler(service Service) *handler {
 }
 
 func (h *handler) PlaceOrder(w http.ResponseWriter, r *http.Request) {
-	var order createOrderParams
+	userID, ok := r.Context().Value("userID").(int64)
+	if !ok || userID == 0 {
+		log.Printf("Failed to extract userID from context")
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	order := createOrderParams{
+		UserID: userID,
+	}
 	if err := json.Read(r, &order); err != nil {
 		log.Printf("Failed to parse order request: %v", err)
 		http.Error(w, "invalid order request body", http.StatusBadRequest)

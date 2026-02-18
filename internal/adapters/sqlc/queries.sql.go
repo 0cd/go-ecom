@@ -13,14 +13,14 @@ import (
 
 const createOrder = `-- name: CreateOrder :one
 INSERT INTO orders (
-  customer_id
-) VALUES ($1) RETURNING id, customer_id, created_at
+  user_id
+) VALUES ($1) RETURNING id, user_id, created_at
 `
 
-func (q *Queries) CreateOrder(ctx context.Context, customerID int64) (Order, error) {
-	row := q.db.QueryRow(ctx, createOrder, customerID)
+func (q *Queries) CreateOrder(ctx context.Context, userID int64) (Order, error) {
+	row := q.db.QueryRow(ctx, createOrder, userID)
 	var i Order
-	err := row.Scan(&i.ID, &i.CustomerID, &i.CreatedAt)
+	err := row.Scan(&i.ID, &i.UserID, &i.CreatedAt)
 	return i, err
 }
 
@@ -125,15 +125,15 @@ func (q *Queries) DeleteUser(ctx context.Context, id int64) error {
 }
 
 const findOrderByID = `-- name: FindOrderByID :many
-SELECT orders.id, orders.customer_id, orders.created_at, order_items.product_id, order_items.quantity, order_items.price_in_cents FROM orders
-INNER JOIN order_items ON order_items.order_id = orders.id
-WHERE orders.id = $1
-ORDER BY order_items.product_id
+SELECT o.id, o.user_id, o.created_at, oi.product_id, oi.quantity, oi.price_in_cents FROM orders o
+INNER JOIN order_items oi ON oi.order_id = o.id
+WHERE o.id = $1
+ORDER BY oi.product_id
 `
 
 type FindOrderByIDRow struct {
 	ID           int64              `json:"id"`
-	CustomerID   int64              `json:"customer_id"`
+	UserID       int64              `json:"user_id"`
 	CreatedAt    pgtype.Timestamptz `json:"created_at"`
 	ProductID    int64              `json:"product_id"`
 	Quantity     int32              `json:"quantity"`
@@ -151,7 +151,7 @@ func (q *Queries) FindOrderByID(ctx context.Context, id int64) ([]FindOrderByIDR
 		var i FindOrderByIDRow
 		if err := rows.Scan(
 			&i.ID,
-			&i.CustomerID,
+			&i.UserID,
 			&i.CreatedAt,
 			&i.ProductID,
 			&i.Quantity,

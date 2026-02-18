@@ -27,8 +27,8 @@ func NewService(repo *repo.Queries, db *pgx.Conn) Service {
 }
 
 func (s *service) PlaceOrder(ctx context.Context, order createOrderParams) (repo.Order, error) {
-	if order.CustomerID == 0 {
-		return repo.Order{}, fmt.Errorf("customer ID is required")
+	if order.UserID == 0 {
+		return repo.Order{}, fmt.Errorf("user ID is required")
 	}
 	if len(order.Items) == 0 {
 		return repo.Order{}, fmt.Errorf("at least one item is required")
@@ -42,7 +42,7 @@ func (s *service) PlaceOrder(ctx context.Context, order createOrderParams) (repo
 
 	qtx := s.repo.WithTx(tx)
 
-	createdOrder, err := qtx.CreateOrder(ctx, order.CustomerID)
+	createdOrder, err := qtx.CreateOrder(ctx, order.UserID)
 	if err != nil {
 		return repo.Order{}, fmt.Errorf("failed to create order: %w", err)
 	}
@@ -54,7 +54,7 @@ func (s *service) PlaceOrder(ctx context.Context, order createOrderParams) (repo
 		}
 
 		if product.Quantity < item.Quantity {
-			return repo.Order{}, fmt.Errorf("product does not have enough stock")
+			return repo.Order{}, fmt.Errorf("product (id: %d) does not have enough stock", item.ProductID)
 		}
 
 		_, err = qtx.CreateOrderItem(ctx, repo.CreateOrderItemParams{
@@ -108,7 +108,7 @@ func (s *service) FindOrderByID(ctx context.Context, id int64) (order, error) {
 
 	o := order{
 		ID:         foundOrders[0].ID,
-		CustomerID: foundOrders[0].CustomerID,
+		UserID:     foundOrders[0].UserID,
 		Items:      items,
 		TotalPrice: totalPrice,
 		CreatedAt:  foundOrders[0].CreatedAt,
