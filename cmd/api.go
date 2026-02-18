@@ -8,11 +8,13 @@ import (
 
 	repo "github.com/0cd/go-ecom/internal/adapters/sqlc"
 	"github.com/0cd/go-ecom/internal/auth"
+	"github.com/0cd/go-ecom/internal/middleware"
 	"github.com/0cd/go-ecom/internal/orders"
 	"github.com/0cd/go-ecom/internal/products"
 	"github.com/0cd/go-ecom/internal/users"
 	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/chi/v5/middleware"
+	chiMiddleware "github.com/go-chi/chi/v5/middleware"
+	"github.com/go-chi/httprate"
 	"github.com/jackc/pgx/v5"
 )
 
@@ -33,12 +35,13 @@ type dbConfig struct {
 func (a *app) mount() http.Handler {
 	r := chi.NewRouter()
 
-	r.Use(middleware.StripSlashes)
-	r.Use(middleware.RequestID)
-	r.Use(middleware.RealIP)
-	r.Use(middleware.Logger)
-	r.Use(middleware.Recoverer)
-	r.Use(middleware.Timeout(60 * time.Second))
+	r.Use(chiMiddleware.StripSlashes)
+	r.Use(chiMiddleware.RequestID)
+	r.Use(chiMiddleware.RealIP)
+	r.Use(chiMiddleware.Logger)
+	r.Use(chiMiddleware.Recoverer)
+	r.Use(chiMiddleware.Timeout(60 * time.Second))
+	r.Use(httprate.LimitByIP(100, 1*time.Minute))
 
 	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
@@ -64,25 +67,57 @@ func (a *app) mount() http.Handler {
 		r.Post("/refresh", authHandler.Refresh)
 	})
 
-	r.Post("/users", userHandler.CreateUser)
-	r.Delete("/users/{id}", userHandler.DeleteUser)
-	r.Get("/users", userHandler.ListUsers)
-	r.Get("/users/search", userHandler.SearchUsers)
-	r.Get("/users/{id}", userHandler.FindUserByID)
-	r.Patch("/users/{id}", userHandler.UpdateUser)
-	r.Patch("/users/{id}/password", userHandler.UpdateUserPassword)
-	r.Patch("/users/{id}/email", userHandler.UpdateUserEmail)
-	r.Patch("/users/{id}/verify", userHandler.VerifyUser)
+	r.Route("/users", func(r chi.Router) {
+		r.Use(middleware.AuthMiddleware)
 
-	r.Get("/products", productHandler.ListProducts)
-	r.Get("/products/{id}", productHandler.FindProductByID)
-	r.Post("/products", productHandler.CreateProduct)
-	r.Patch("/products/{id}", productHandler.UpdateProduct)
-	r.Put("/products/{id}", productHandler.ReplaceProduct)
-	r.Delete("/products/{id}", productHandler.DeleteProduct)
+		r.Route("/me", func(r chi.Router) {
+			r.Get("/", userHandler.GetMe)
+			r.Patch("/password", userHandler.UpdateUserPassword)
+			r.Patch("/email", userHandler.UpdateUserEmail)
+			r.Patch("/verify", userHandler.VerifyUser)
+		})
+	})
 
-	r.Get("/orders/{id}", ordersHandler.FindOrderByID)
-	r.Post("/orders", ordersHandler.PlaceOrder)
+	r.Route("/products", func(r chi.Router) {
+		r.Get("/", productHandler.ListProducts)
+		r.Get("/{id}", productHandler.FindProductByID)
+	})
+
+	r.Route("/orders", func(r chi.Router) {
+		r.Use(middleware.AuthMiddleware)
+
+		r.Post("/", ordersHandler.PlaceOrder)
+		// TODO: get user's orders
+	})
+
+	// admin only endpoints
+	r.Route("/admin", func(r chi.Router) {
+		r.Use(middleware.AuthMiddleware)
+		r.Use(middleware.AdminMiddleware(userService))
+
+		r.Route("/users", func(r chi.Router) {
+			r.Post("/", userHandler.CreateUser)
+			r.Get("/", userHandler.ListUsers)
+			r.Get("/search", userHandler.SearchUsers)
+			r.Get("/{id}", userHandler.FindUserByID)
+			r.Patch("/{id}", userHandler.UpdateUser)
+			r.Delete("/{id}", userHandler.DeleteUser)
+		})
+
+		r.Route("/products", func(r chi.Router) {
+			r.Post("/", productHandler.CreateProduct)
+			r.Patch("/{id}", productHandler.UpdateProduct)
+			r.Put("/{id}", productHandler.ReplaceProduct)
+			r.Delete("/{id}", productHandler.DeleteProduct)
+		})
+
+		r.Route("/orders", func(r chi.Router) {
+			// TODO: get all orders endpoint
+			r.Get("/{id}", ordersHandler.FindOrderByID)
+			// TODO: update order (maybe)
+			// TODO: delete order
+		})
+	})
 
 	return r
 }
