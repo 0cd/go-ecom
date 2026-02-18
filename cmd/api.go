@@ -9,6 +9,7 @@ import (
 	repo "github.com/0cd/go-ecom/internal/adapters/sqlc"
 	"github.com/0cd/go-ecom/internal/orders"
 	"github.com/0cd/go-ecom/internal/products"
+	"github.com/0cd/go-ecom/internal/users"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/jackc/pgx/v5"
@@ -42,6 +43,19 @@ func (a *app) mount() http.Handler {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("OK"))
 	})
+
+	userService := users.NewService(repo.New(a.db))
+	userHandler := users.NewHandler(userService)
+
+	r.Post("/users", userHandler.CreateUser)
+	r.Delete("/users/{id}", userHandler.DeleteUser)
+	r.Get("/users", userHandler.ListUsers)
+	r.Get("/users/search", userHandler.SearchUsers)
+	r.Get("/users/{id}", userHandler.FindUserByID)
+	r.Patch("/users", userHandler.UpdateUser)
+	r.Patch("/users/{id}/password", userHandler.UpdateUserPassword)
+	r.Patch("/users/{id}/email", userHandler.UpdateUserEmail)
+	r.Patch("/users/{id}/verify", userHandler.VerifyUser)
 
 	productService := products.NewService(repo.New(a.db))
 	productHandler := products.NewHandler(productService)

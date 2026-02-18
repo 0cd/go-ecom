@@ -16,7 +16,6 @@ type Service interface {
 	ListUsers(ctx context.Context) ([]repo.ListUsersRow, error)
 	SearchUsers(ctx context.Context, query pgtype.Text) ([]repo.SearchUsersRow, error)
 	FindUserByID(ctx context.Context, id int64) (repo.FindUserByIDRow, error)
-	FindUserByEmail(ctx context.Context, email string) (repo.FindUserByEmailRow, error)
 
 	UpdateUser(ctx context.Context, updates repo.UpdateUserParams) (repo.User, error)
 	UpdateUserPassword(ctx context.Context, id int64, oldPassword, newPassword string) error
@@ -95,15 +94,6 @@ func (s *service) FindUserByID(ctx context.Context, id int64) (repo.FindUserByID
 	foundUser, err := s.repo.FindUserByID(ctx, id)
 	if err != nil {
 		return repo.FindUserByIDRow{}, fmt.Errorf("failed to fetch user (id: %v): %w", id, err)
-	}
-
-	return foundUser, nil
-}
-
-func (s *service) FindUserByEmail(ctx context.Context, email string) (repo.FindUserByEmailRow, error) {
-	foundUser, err := s.repo.FindUserByEmail(ctx, email)
-	if err != nil {
-		return repo.FindUserByEmailRow{}, fmt.Errorf("failed to fetch user (email: %s): %w", email, err)
 	}
 
 	return foundUser, nil
@@ -245,7 +235,7 @@ func (s *service) VerifyUser(ctx context.Context, id int64) error {
 		},
 	})
 	if err != nil {
-		return fmt.Errorf("failed to update email: %w", err)
+		return fmt.Errorf("failed to verify user: %w", err)
 	}
 
 	return nil
