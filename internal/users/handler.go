@@ -51,7 +51,7 @@ func (h *handler) DeleteUser(w http.ResponseWriter, r *http.Request) {
 	err = h.service.DeleteUser(r.Context(), id)
 	if err != nil {
 		log.Printf("Failed to delete user in service: %v", err)
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
