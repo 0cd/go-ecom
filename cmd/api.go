@@ -7,6 +7,7 @@ import (
 	"time"
 
 	repo "github.com/0cd/go-ecom/internal/adapters/sqlc"
+	"github.com/0cd/go-ecom/internal/auth"
 	"github.com/0cd/go-ecom/internal/orders"
 	"github.com/0cd/go-ecom/internal/products"
 	"github.com/0cd/go-ecom/internal/users"
@@ -47,6 +48,22 @@ func (a *app) mount() http.Handler {
 	userService := users.NewService(repo.New(a.db))
 	userHandler := users.NewHandler(userService)
 
+	authService := auth.NewService(userService)
+	authHandler := auth.NewHandler(authService)
+
+	productService := products.NewService(repo.New(a.db))
+	productHandler := products.NewHandler(productService)
+
+	ordersService := orders.NewService(repo.New(a.db), a.db)
+	ordersHandler := orders.NewHandler(ordersService)
+
+	r.Route("/auth", func(r chi.Router) {
+		r.Post("/register", authHandler.Register)
+		r.Post("/login", authHandler.Login)
+		r.Post("/logout", authHandler.Logout)
+		r.Post("/refresh", authHandler.Refresh)
+	})
+
 	r.Post("/users", userHandler.CreateUser)
 	r.Delete("/users/{id}", userHandler.DeleteUser)
 	r.Get("/users", userHandler.ListUsers)
@@ -57,9 +74,6 @@ func (a *app) mount() http.Handler {
 	r.Patch("/users/{id}/email", userHandler.UpdateUserEmail)
 	r.Patch("/users/{id}/verify", userHandler.VerifyUser)
 
-	productService := products.NewService(repo.New(a.db))
-	productHandler := products.NewHandler(productService)
-
 	r.Get("/products", productHandler.ListProducts)
 	r.Get("/products/{id}", productHandler.FindProductByID)
 	r.Post("/products", productHandler.CreateProduct)
@@ -67,8 +81,6 @@ func (a *app) mount() http.Handler {
 	r.Put("/products/{id}", productHandler.ReplaceProduct)
 	r.Delete("/products/{id}", productHandler.DeleteProduct)
 
-	ordersService := orders.NewService(repo.New(a.db), a.db)
-	ordersHandler := orders.NewHandler(ordersService)
 	r.Get("/orders/{id}", ordersHandler.FindOrderByID)
 	r.Post("/orders", ordersHandler.PlaceOrder)
 
